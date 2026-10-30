@@ -8,6 +8,7 @@ use Lunar\Panel\Navigation\NavigationItem;
 use Lunar\Panel\Navigation\NavigationRegistry;
 use Lunar\Panel\Sections\Section;
 use LunarCms\Http\Controllers\PageController;
+use LunarCms\Http\Controllers\PageMediaController;
 
 class CmsSection extends Section
 {
@@ -65,6 +66,7 @@ class CmsSection extends Section
                     Route::delete('pages/{page}', [PageController::class, 'destroy'])->name('destroy');
                     Route::post('pages/{page}/publish', [PageController::class, 'publish'])->name('publish');
                     Route::post('pages/{page}/unpublish', [PageController::class, 'unpublish'])->name('unpublish');
+                    Route::post('pages/{page}/media', [PageMediaController::class, 'store'])->name('media.store');
                 });
         };
     }

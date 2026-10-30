@@ -2,6 +2,14 @@
 import { computed } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import { PageHeader, PageZone, Button, TextInput, Select, DatePicker, FieldLabel } from '@lunarphp/panel';
+import BlockEditor from '../components/BlockEditor.vue';
+
+interface Block {
+    id: string;
+    type: string;
+    enabled: boolean;
+    data: Record<string, unknown>;
+}
 
 interface PageForm {
     id: number;
@@ -9,11 +17,13 @@ interface PageForm {
     slug: string;
     status: 'draft' | 'published';
     published_at: string | null;
+    blocks: Block[];
 }
 
 const props = defineProps<{
     page: PageForm | null;
-    urls: { store?: string; update?: string; index: string };
+    media: Record<number, { id: number; url: string; name: string }>;
+    urls: { store?: string; update?: string; media?: string; index: string };
 }>();
 
 const isEdit = computed(() => props.page !== null);
@@ -23,6 +33,7 @@ const form = useForm({
     slug: props.page?.slug ?? '',
     status: props.page?.status ?? 'draft',
     published_at: props.page?.published_at ?? '',
+    blocks: props.page?.blocks ?? [],
 });
 
 const submit = (): void => {
@@ -77,6 +88,12 @@ const submit = (): void => {
                     <p v-if="form.errors.published_at" class="mt-1 text-[11px] text-danger">
                         {{ form.errors.published_at }}
                     </p>
+                </div>
+
+                <div>
+                    <FieldLabel hint="Drag to reorder · toggle to draft a block">Content blocks</FieldLabel>
+                    <BlockEditor v-model="form.blocks" :media="media" :media-upload-url="urls.media" />
+                    <p v-if="form.errors.blocks" class="mt-1 text-[11px] text-danger">{{ form.errors.blocks }}</p>
                 </div>
 
                 <div class="flex items-center gap-2 pt-2">

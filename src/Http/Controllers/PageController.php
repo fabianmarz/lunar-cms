@@ -74,6 +74,7 @@ class PageController
     {
         return Inertia::render('cms::Pages/Form', [
             'page' => null,
+            'media' => [],
             'urls' => [
                 'store' => route('panel.cms.pages.store'),
                 'index' => route('panel.cms.pages.index'),
@@ -101,10 +102,20 @@ class PageController
                 'slug' => $page->slug,
                 'status' => $page->status->value,
                 'published_at' => $page->published_at?->format('Y-m-d\TH:i'),
+                'blocks' => $page->blocks ?? [],
             ],
+            // Preview URLs for media referenced by the page's blocks — the
+            // editor only needs ids and display URLs, not full media models.
+            'media' => $page->getMedia('blocks')
+                ->mapWithKeys(fn ($media) => [$media->id => [
+                    'id' => $media->id,
+                    'url' => $media->getUrl(),
+                    'name' => $media->name,
+                ]]),
             'urls' => [
                 'update' => route('panel.cms.pages.update', $page),
                 'index' => route('panel.cms.pages.index'),
+                'media' => route('panel.cms.pages.media.store', $page),
             ],
         ]);
     }
