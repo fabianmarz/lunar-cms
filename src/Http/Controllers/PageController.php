@@ -114,6 +114,7 @@ class PageController
                 ]]),
             'urls' => [
                 'update' => route('panel.cms.pages.update', $page),
+                'destroy' => route('panel.cms.pages.destroy', $page),
                 'index' => route('panel.cms.pages.index'),
                 'media' => route('panel.cms.pages.media.store', $page),
             ],
