@@ -1,0 +1,22 @@
+{
+    "name": "lunar-2-test/cms",
+    "description": "CMS pages add-on for the Lunar 2 admin panel: block-based content pages with publish workflow.",
+    "license": "MIT",
+    "type": "library",
+    "autoload": {
+        "psr-4": {
+            "LunarCms\\": "src/"
+        }
+    },
+    "require": {
+        "php": "^8.3",
+        "lunarphp/panel": "2.x-dev"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LunarCms\\CmsServiceProvider"
+            ]
+        }
+    }
+}
