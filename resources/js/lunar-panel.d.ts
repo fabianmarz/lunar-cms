@@ -5,6 +5,7 @@ declare global {
         LunarPanel: {
             registerPages(pages: Record<string, Component>): void;
             registerComponents(namespace: string, components: Record<string, Component>): void;
+            resolveExtensionComponent?(name: string): Component | undefined;
         };
     }
 }

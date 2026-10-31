@@ -39,7 +39,15 @@ const props = defineProps<{
     page: PageForm | null;
     media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
     languages: LanguageOption[];
-    urls: { store?: string; update?: string; destroy?: string; media?: string; index: string };
+    urls: {
+        store?: string;
+        update?: string;
+        destroy?: string;
+        media?: string;
+        mediaPicker?: string | null;
+        mediaLibraryUpload?: string | null;
+        index: string;
+    };
 }>();
 
 const isEdit = computed(() => props.page !== null);
@@ -180,7 +188,11 @@ const destroy = (): void => {
                                     </option>
                                 </select>
                             </template>
-                            <BlockEditor :key="contentLocale" v-model="blocks" :media="media" :media-upload-url="urls.media" />
+                            <BlockEditor :key="contentLocale" v-model="blocks" :media="media"
+                                :media-upload-url="urls.media"
+                                :media-picker-url="urls.mediaPicker"
+                                :media-library-upload-url="urls.mediaLibraryUpload"
+                            />
                             <p v-if="form.errors.blocks" class="mt-1 text-[11px] text-danger">{{ form.errors.blocks }}</p>
                         </Section>
 

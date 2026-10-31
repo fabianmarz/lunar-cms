@@ -4,12 +4,15 @@ namespace LunarCms\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
 use LunarCms\Http\Requests\PageRequest;
 use LunarCms\Models\Page;
 use LunarCms\PageStatus;
 use LunarCms\Support\Languages;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class PageController
 {
@@ -111,22 +114,42 @@ class PageController
                 'blocks' => $page->blocks ?: (object) [],
             ],
             'languages' => Languages::all(),
-            // Preview URLs for media referenced by the page's blocks — the
-            // editor only needs ids and display URLs, not full media models.
-            'media' => $page->getMedia(config('lunar.media.collection'))
-                ->mapWithKeys(fn ($media) => [$media->id => [
-                    'id' => $media->id,
-                    'url' => $media->getAvailableUrl(['small']),
-                    'original_url' => $media->getUrl(),
-                    'name' => $media->file_name,
-                ]]),
+            // Preview URLs for the page's own images plus any library file its
+            // image blocks reference — the editor only needs ids and display URLs.
+            'media' => $this->blockMedia($page),
             'urls' => [
                 'update' => route('panel.cms.pages.update', $page),
                 'destroy' => route('panel.cms.pages.destroy', $page),
                 'index' => route('panel.cms.pages.index'),
                 'media' => route('panel.cms.pages.media.store', $page),
+                'mediaPicker' => Route::has('panel.media.picker') ? route('panel.media.picker') : null,
+                'mediaLibraryUpload' => Route::has('panel.media.store') ? route('panel.media.store') : null,
             ],
         ]);
+    }
+
+    /**
+     * @return Collection<int, array{id: int, url: ?string, original_url: string, name: string}>
+     */
+    private function blockMedia(Page $page): Collection
+    {
+        $referenced = collect($page->blocks ?? [])
+            ->flatten(1)
+            ->filter(fn ($block) => ($block['type'] ?? null) === 'image' && ! empty($block['data']['media_id']))
+            ->pluck('data.media_id')
+            ->map(fn ($id) => (int) $id);
+
+        $own = $page->getMedia(config('lunar.media.collection'))->pluck('id');
+
+        return Media::query()
+            ->whereIn('id', $own->merge($referenced)->unique()->all())
+            ->get()
+            ->mapWithKeys(fn (Media $media) => [$media->id => [
+                'id' => $media->id,
+                'url' => $media->getAvailableUrl(['small']),
+                'original_url' => $media->getUrl(),
+                'name' => $media->file_name,
+            ]]);
     }
 
     public function update(PageRequest $request, Page $page): RedirectResponse

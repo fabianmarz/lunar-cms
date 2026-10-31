@@ -8,9 +8,28 @@ const props = defineProps<{
     data: ImageData;
     media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
     mediaUploadUrl?: string;
+    mediaPickerUrl?: string | null;
+    mediaLibraryUploadUrl?: string | null;
 }>();
 
 const emit = defineEmits<{ 'update:data': [value: ImageData] }>();
+
+// The media add-on is optional: its picker is looked up by name at runtime, and
+// the button only shows when both the component and its URLs are available.
+const MediaPicker = window.LunarPanel.resolveExtensionComponent?.('media::MediaPicker');
+const canPick = computed(() => !!MediaPicker && !!props.mediaPickerUrl && !!props.mediaLibraryUploadUrl);
+const pickerOpen = ref(false);
+
+const onPick = (items: { id: number; url: string | null; original_url: string; name: string }[]): void => {
+    const item = items[0];
+
+    if (!item) {
+        return;
+    }
+
+    props.media[item.id] = { id: item.id, url: item.url ?? item.original_url, original_url: item.original_url, name: item.name };
+    emit('update:data', { ...props.data, media_id: item.id });
+};
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const uploading = ref(false);
@@ -73,6 +92,17 @@ const setAlt = (alt: string): void => {
         <div v-if="current" class="flex items-center gap-3">
             <img :src="current.url" :alt="data.alt ?? ''" class="h-16 w-16 rounded-md object-cover border border-line" />
             <span class="text-[12px] text-ink-500 truncate">{{ current.name }}</span>
+        </div>
+
+        <div v-if="canPick" class="flex items-center gap-2">
+            <Button icon="image" @click="pickerOpen = true">Choose from library</Button>
+            <component
+                :is="MediaPicker"
+                v-model:open="pickerOpen"
+                :picker-url="mediaPickerUrl"
+                :upload-url="mediaLibraryUploadUrl"
+                @select="onPick"
+            />
         </div>
 
         <div v-if="mediaUploadUrl" class="flex items-center gap-2">
