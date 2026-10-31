@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, toRaw } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import {
     Breadcrumbs,
@@ -32,7 +32,7 @@ interface PageForm {
     slug: Translations;
     status: 'draft' | 'published';
     published_at: string | null;
-    blocks: Block[];
+    blocks: Record<string, Block[]>;
 }
 
 const props = defineProps<{
@@ -50,10 +50,31 @@ const form = useForm({
     slug: props.page?.slug ?? {},
     status: props.page?.status ?? 'draft',
     published_at: props.page?.published_at ?? '',
-    blocks: props.page?.blocks ?? [],
+    blocks: props.page?.blocks ?? {},
+});
+
+// The content has its own language switch: every language keeps a separate
+// block list, so translations can differ in structure, not just text.
+const contentLocale = ref(props.languages.find((language) => language.default)?.code ?? props.languages[0]?.code ?? 'en');
+
+const blocks = computed({
+    get: () => form.blocks[contentLocale.value] ?? [],
+    set: (value: Block[]) => (form.blocks = { ...form.blocks, [contentLocale.value]: value }),
 });
 
 const defaultLocale = computed(() => props.languages.find((language) => language.default)?.code ?? props.languages[0]?.code ?? 'en');
+
+const canCopyFromDefault = computed(
+    () => contentLocale.value !== defaultLocale.value && (form.blocks[defaultLocale.value]?.length ?? 0) > 0,
+);
+
+// Starts a translation from the default language's blocks, with fresh ids.
+const copyFromDefault = (): void => {
+    blocks.value = (form.blocks[defaultLocale.value] ?? []).map((block) => ({
+        ...structuredClone(toRaw(block)),
+        id: crypto.randomUUID(),
+    }));
+};
 
 // Validation errors are keyed per language (`title.en`); surface the first.
 const fieldError = (field: 'title' | 'slug'): string | undefined =>
@@ -144,7 +165,22 @@ const destroy = (): void => {
 
                         <Section title="Content">
                             <template #desc>Compose the page from blocks. Drag to reorder, toggle a block to keep it as draft.</template>
-                            <BlockEditor v-model="form.blocks" :media="media" :media-upload-url="urls.media" :languages="languages" />
+                            <template #actions>
+                                <Button v-if="canCopyFromDefault" size="sm" @click="copyFromDefault">
+                                    Copy from {{ defaultLocale.toUpperCase() }}
+                                </Button>
+                                <select
+                                    v-if="languages.length > 1"
+                                    v-model="contentLocale"
+                                    class="h-[22px] px-1 border border-line-strong rounded-md bg-surface-2 text-[10.5px] font-mono uppercase tracking-wide text-ink-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sage/35"
+                                    aria-label="Language"
+                                >
+                                    <option v-for="language in languages" :key="language.code" :value="language.code" :title="language.name ?? language.code">
+                                        {{ language.code.toUpperCase() }}
+                                    </option>
+                                </select>
+                            </template>
+                            <BlockEditor :key="contentLocale" v-model="blocks" :media="media" :media-upload-url="urls.media" />
                             <p v-if="form.errors.blocks" class="mt-1 text-[11px] text-danger">{{ form.errors.blocks }}</p>
                         </Section>
 

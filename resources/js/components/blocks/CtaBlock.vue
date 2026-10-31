@@ -1,25 +1,19 @@
 <script setup lang="ts">
 import { TextInput } from '@lunarphp/panel';
-import type { LanguageOption, Translations } from '../../translations';
-import TranslatedField from '../TranslatedField.vue';
 
-type CtaData = { label?: Translations; url?: string };
+type CtaData = { label?: string; url?: string };
 
-const props = defineProps<{ data: CtaData; languages: LanguageOption[] }>();
+const props = defineProps<{ data: CtaData }>();
 const emit = defineEmits<{ 'update:data': [value: CtaData] }>();
 
-const setLabel = (value: Translations): void => {
-    emit('update:data', { ...props.data, label: value });
-};
-
-const setUrl = (value: string): void => {
-    emit('update:data', { ...props.data, url: value });
+const set = (key: keyof CtaData, value: string): void => {
+    emit('update:data', { ...props.data, [key]: value });
 };
 </script>
 
 <template>
     <div class="grid grid-cols-2 gap-3">
-        <TranslatedField :model-value="data.label" :languages="languages" placeholder="Button label" @update:model-value="setLabel" />
-        <TextInput :model-value="data.url ?? ''" placeholder="URL (e.g. /contact)" @update:model-value="setUrl" />
+        <TextInput :model-value="data.label ?? ''" placeholder="Button label" @update:model-value="(v) => set('label', v)" />
+        <TextInput :model-value="data.url ?? ''" placeholder="URL (e.g. /contact)" @update:model-value="(v) => set('url', v)" />
     </div>
 </template>

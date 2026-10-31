@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue';
 import Sortable from 'sortablejs';
 import { Icon, Toggle } from '@lunarphp/panel';
 import { blockTypes } from '../blocks';
-import type { LanguageOption } from '../translations';
 
 interface Block {
     id: string;
@@ -16,7 +15,6 @@ const props = defineProps<{
     modelValue: Block[];
     media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
     mediaUploadUrl?: string;
-    languages: LanguageOption[];
 }>();
 
 const emit = defineEmits<{ 'update:modelValue': [value: Block[]] }>();
@@ -124,7 +122,6 @@ onMounted(() => {
                         v-model:data="block.data"
                         :media="media"
                         :media-upload-url="mediaUploadUrl"
-                        :languages="languages"
                     />
                     <p v-else class="text-[12px] text-ink-500">Unsupported block type: {{ block.type }}</p>
                 </div>

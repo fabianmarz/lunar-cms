@@ -108,7 +108,7 @@ class PageController
                 'slug' => $page->slug ?? (object) [],
                 'status' => $page->status->value,
                 'published_at' => $page->published_at?->format('Y-m-d\TH:i'),
-                'blocks' => $page->blocks ?? [],
+                'blocks' => $page->blocks ?: (object) [],
             ],
             'languages' => Languages::all(),
             // Preview URLs for media referenced by the page's blocks — the

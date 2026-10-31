@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Button } from '@lunarphp/panel';
-import type { LanguageOption, Translations } from '../../translations';
-import TranslatedField from '../TranslatedField.vue';
+import { Button, TextInput } from '@lunarphp/panel';
 
-type ImageData = { media_id?: number | null; alt?: Translations };
+type ImageData = { media_id?: number | null; alt?: string };
 
 const props = defineProps<{
     data: ImageData;
     media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
     mediaUploadUrl?: string;
-    languages: LanguageOption[];
 }>();
 
 const emit = defineEmits<{ 'update:data': [value: ImageData] }>();
@@ -66,7 +63,7 @@ const upload = async (event: Event): Promise<void> => {
     }
 };
 
-const setAlt = (alt: Translations): void => {
+const setAlt = (alt: string): void => {
     emit('update:data', { ...props.data, alt });
 };
 </script>
@@ -74,7 +71,7 @@ const setAlt = (alt: Translations): void => {
 <template>
     <div class="space-y-2">
         <div v-if="current" class="flex items-center gap-3">
-            <img :src="current.url" :alt="Object.values(data.alt ?? {})[0] ?? ''" class="h-16 w-16 rounded-md object-cover border border-line" />
+            <img :src="current.url" :alt="data.alt ?? ''" class="h-16 w-16 rounded-md object-cover border border-line" />
             <span class="text-[12px] text-ink-500 truncate">{{ current.name }}</span>
         </div>
 
@@ -89,6 +86,6 @@ const setAlt = (alt: Translations): void => {
         </div>
         <p v-else class="text-[11px] text-ink-400">Save the page first — uploads need a page to attach to.</p>
 
-        <TranslatedField :model-value="data.alt" :languages="languages" placeholder="Alt text" @update:model-value="setAlt" />
+        <TextInput :model-value="data.alt ?? ''" placeholder="Alt text" @update:model-value="setAlt" />
     </div>
 </template>
