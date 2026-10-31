@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Link, router, useForm } from '@inertiajs/vue3';
+import { router, useForm } from '@inertiajs/vue3';
 import {
+    Breadcrumbs,
     Button,
     ConfirmDialog,
     DatePicker,
     FieldLabel,
     PageHeader,
     PageZone,
-    Select,
     SideCard,
+    StatusBadge,
     TextInput,
+    type BreadcrumbItem,
 } from '@lunarphp/panel';
 import BlockEditor from '../components/BlockEditor.vue';
 
@@ -47,6 +49,17 @@ const form = useForm({
     blocks: props.page?.blocks ?? [],
 });
 
+const breadcrumbs = computed<BreadcrumbItem[]>(() => [
+    { label: 'Content' },
+    { label: 'Pages', href: props.urls.index },
+    { label: props.page?.title || 'New page', current: true },
+]);
+
+const statusOptions = [
+    { value: 'draft', label: 'Draft', tone: 'warn' },
+    { value: 'published', label: 'Published', tone: 'sage' },
+] as const;
+
 const submit = (): void => {
     if (isEdit.value) {
         form.put(props.urls.update!);
@@ -58,16 +71,30 @@ const submit = (): void => {
 const destroy = (): void => {
     router.delete(props.urls.destroy!, { preserveScroll: true });
 };
-
-const statusOptions = [
-    { value: 'draft', label: 'Draft' },
-    { value: 'published', label: 'Published' },
-];
 </script>
 
 <template>
     <div class="contents">
+        <Breadcrumbs :items="breadcrumbs">
+            <template #actions>
+                <Button type="submit" form="cms-page-form" :disabled="form.processing">
+                    {{ isEdit ? 'Save changes' : 'Create page' }}
+                </Button>
+            </template>
+        </Breadcrumbs>
+
         <PageHeader :title="page?.title || 'New page'">
+            <template #description>
+                <div class="flex gap-2 items-center flex-wrap">
+                    <StatusBadge :tone="form.status === 'published' ? 'sage' : 'warn'" dot>
+                        {{ form.status === 'published' ? 'Published' : 'Draft' }}
+                    </StatusBadge>
+                    <template v-if="page?.slug">
+                        <span class="text-ink-500">·</span>
+                        <span class="font-mono">/{{ page.slug }}</span>
+                    </template>
+                </div>
+            </template>
             <template #actions>
                 <Button
                     v-if="isEdit"
@@ -77,9 +104,6 @@ const statusOptions = [
                     @click="confirmingDelete = true"
                 >
                     Delete
-                </Button>
-                <Button type="submit" form="cms-page-form" :disabled="form.processing">
-                    {{ isEdit ? 'Save changes' : 'Create page' }}
                 </Button>
             </template>
         </PageHeader>
@@ -130,11 +154,27 @@ const statusOptions = [
                             <PageZone region="sidebar" position="before" />
 
                             <SideCard title="Publication">
-                                <FieldLabel>Status</FieldLabel>
-                                <Select v-model="form.status" :options="statusOptions" />
-                                <p v-if="form.errors.status" class="mt-1 text-[11px] text-danger">
-                                    {{ form.errors.status }}
-                                </p>
+                                <div class="grid grid-flow-col auto-cols-fr gap-1 p-1 bg-surface-2 border border-line rounded-lg" role="radiogroup">
+                                    <button
+                                        v-for="option in statusOptions"
+                                        :key="option.value"
+                                        type="button"
+                                        role="radio"
+                                        :aria-checked="option.value === form.status"
+                                        :class="[
+                                            'h-[28px] px-2 rounded-md text-[12px] font-medium transition-[background-color,color,box-shadow] duration-100',
+                                            option.value === form.status
+                                                ? option.tone === 'sage'
+                                                    ? 'bg-sage-soft border border-sage-border text-sage-ink shadow-sm'
+                                                    : 'bg-warn-soft border border-warn-border text-warn-ink shadow-sm'
+                                                : 'text-ink-500 hover:text-ink-900 hover:bg-surface/60',
+                                        ]"
+                                        @click="form.status = option.value"
+                                    >{{ option.label }}</button>
+                                </div>
+                                <div class="text-[11.5px] text-ink-500 mt-2.5">
+                                    {{ form.status === 'published' ? 'Visible on the storefront.' : 'Hidden from the storefront. Only visible to staff.' }}
+                                </div>
                                 <div class="mt-3.5">
                                     <FieldLabel hint="Optional">Publish date</FieldLabel>
                                     <DatePicker v-model="form.published_at" :invalid="!!form.errors.published_at" />
@@ -145,10 +185,6 @@ const statusOptions = [
                             </SideCard>
 
                             <PageZone region="sidebar" position="after" />
-
-                            <Link :href="urls.index" class="text-[12.5px] text-ink-500 hover:text-ink-700">
-                                ← Back to pages
-                            </Link>
                         </div>
                     </aside>
                 </div>
