@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Button, TextInput } from '@lunarphp/panel';
+import { withTranslation, type Translations } from '../../translations';
+
+type ImageData = { media_id?: number | null; alt?: Translations };
 
 const props = defineProps<{
-    data: { media_id?: number | null; alt?: string };
-    media: Record<number, { id: number; url: string; name: string }>;
+    data: ImageData;
+    media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
     mediaUploadUrl?: string;
+    locale: string;
 }>();
 
-const emit = defineEmits<{ 'update:data': [value: { media_id: number | null; alt: string }] }>();
+const emit = defineEmits<{ 'update:data': [value: ImageData] }>();
 
+const fileInput = ref<HTMLInputElement | null>(null);
 const uploading = ref(false);
 const uploadError = ref('');
 
@@ -51,7 +56,7 @@ const upload = async (event: Event): Promise<void> => {
         const media = await response.json();
         // Register in the shared media map so the preview resolves immediately.
         props.media[media.id] = media;
-        emit('update:data', { media_id: media.id, alt: props.data.alt ?? '' });
+        emit('update:data', { ...props.data, media_id: media.id });
     } catch (e) {
         uploadError.value = e instanceof Error ? e.message : 'Upload failed';
     } finally {
@@ -61,30 +66,30 @@ const upload = async (event: Event): Promise<void> => {
 };
 
 const setAlt = (alt: string): void => {
-    emit('update:data', { media_id: props.data.media_id ?? null, alt });
+    emit('update:data', { ...props.data, alt: withTranslation(props.data.alt, props.locale, alt) });
 };
 </script>
 
 <template>
     <div class="space-y-2">
         <div v-if="current" class="flex items-center gap-3">
-            <img :src="current.url" :alt="data.alt" class="h-16 w-16 rounded-md object-cover border border-line" />
+            <img :src="current.url" :alt="data.alt?.[locale] ?? ''" class="h-16 w-16 rounded-md object-cover border border-line" />
             <span class="text-[12px] text-ink-500 truncate">{{ current.name }}</span>
         </div>
 
         <div v-if="mediaUploadUrl" class="flex items-center gap-2">
-            <label class="inline-flex items-center gap-2 text-[13px] text-ink-700 cursor-pointer">
-                <input type="file" accept="image/*" class="hidden" :disabled="uploading" @change="upload" />
-                <Button as="span" :icon="uploading ? 'refresh' : 'upload'" :disabled="uploading">
-                    {{ uploading ? 'Uploading…' : current ? 'Replace image' : 'Upload image' }}
-                </Button>
-            </label>
+            <!-- A real button opens the picker: the panel's Button renders a
+                 <button>, which a wrapping <label> never forwards clicks from. -->
+            <input ref="fileInput" type="file" accept="image/*" class="hidden" :disabled="uploading" @change="upload" />
+            <Button :icon="uploading ? 'refresh' : 'upload'" :disabled="uploading" @click="fileInput?.click()">
+                {{ uploading ? 'Uploading…' : current ? 'Replace image' : 'Upload image' }}
+            </Button>
             <p v-if="uploadError" class="text-[11px] text-danger">{{ uploadError }}</p>
         </div>
         <p v-else class="text-[11px] text-ink-400">Save the page first — uploads need a page to attach to.</p>
 
         <TextInput
-            :model-value="data.alt ?? ''"
+            :model-value="data.alt?.[locale] ?? ''"
             placeholder="Alt text"
             @update:model-value="setAlt"
         />

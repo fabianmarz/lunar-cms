@@ -36,7 +36,13 @@ const styles = `
 .cms-block:hover .cms-block-add,.cms-block-add:focus-visible{opacity:1}
 .cms-menu{min-width:10rem}
 .cms-block .tiptap{min-height:6rem;outline:none}
-.cms-block .tiptap p{margin:0}
+.cms-block .tiptap p{margin:0 0 .5em}
+.cms-block .tiptap h2{font-size:1.15rem;font-weight:600;margin:.6em 0 .3em}
+.cms-block .tiptap h3{font-size:1rem;font-weight:600;margin:.6em 0 .3em}
+.cms-block .tiptap ul,.cms-block .tiptap ol{padding-left:1.25em;margin:0 0 .5em}
+.cms-block .tiptap ul{list-style:disc}.cms-block .tiptap ol{list-style:decimal}
+.cms-block .tiptap blockquote{border-left:3px solid var(--color-line-strong);padding-left:.75em;margin:0 0 .5em;color:var(--color-ink-500)}
+.cms-block .tiptap a{text-decoration:underline}
 `;
 
 const styleEl = document.createElement('style');

@@ -6,7 +6,8 @@ use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
  * The block types editors can place on a page, and the server-side contract
- * for each type's `data` payload. The Vue editor mirrors this registry —
+ * for each type's `data` payload. Translatable fields (rich text content, image
+ * alt text, button label) are `{language code: value}` maps. The Vue editor mirrors this registry —
  * a type added here needs a matching editor component in resources/js/blocks.
  */
 class BlockRegistry
@@ -21,19 +22,22 @@ class BlockRegistry
                 'label' => 'Rich text',
                 'rules' => [
                     'content' => ['required', 'array'],
+                    'content.*' => ['nullable', 'string'],
                 ],
             ],
             'image' => [
                 'label' => 'Image',
                 'rules' => [
                     'media_id' => ['required', 'integer', 'exists:media,id'],
-                    'alt' => ['nullable', 'string', 'max:255'],
+                    'alt' => ['nullable', 'array'],
+                    'alt.*' => ['nullable', 'string', 'max:255'],
                 ],
             ],
             'cta' => [
                 'label' => 'Button',
                 'rules' => [
-                    'label' => ['required', 'string', 'max:255'],
+                    'label' => ['required', 'array'],
+                    'label.*' => ['nullable', 'string', 'max:255'],
                     'url' => ['required', 'string', 'max:2048'],
                 ],
             ],

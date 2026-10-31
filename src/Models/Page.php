@@ -3,13 +3,19 @@
 namespace LunarCms\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Lunar\Core\Models\Concerns\HasMedia;
+use Lunar\Core\Models\Concerns\HasTranslations;
 use LunarCms\PageStatus;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\HasMedia as SpatieHasMedia;
 
-class Page extends Model implements HasMedia
+/**
+ * `title` and `slug` are `{language code: value}` maps; read them with
+ * `translate('title')`, which falls back to the default language.
+ */
+class Page extends Model implements SpatieHasMedia
 {
-    use InteractsWithMedia;
+    use HasMedia;
+    use HasTranslations;
 
     /** @var list<string> */
     protected $fillable = [
@@ -26,6 +32,8 @@ class Page extends Model implements HasMedia
         return [
             'status' => PageStatus::class,
             'published_at' => 'datetime',
+            'title' => 'array',
+            'slug' => 'array',
             'blocks' => 'array',
         ];
     }
@@ -33,12 +41,7 @@ class Page extends Model implements HasMedia
     protected static function booted(): void
     {
         // Media rows/files don't cascade on their own.
-        static::deleting(fn (Page $page) => $page->clearMediaCollection('blocks'));
-    }
-
-    public function registerMediaCollections(): void
-    {
-        $this->addMediaCollection('blocks');
+        static::deleting(fn (Page $page) => $page->clearMediaCollection(config('lunar.media.collection')));
     }
 
     public function publish(): void

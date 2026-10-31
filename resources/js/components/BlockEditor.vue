@@ -13,8 +13,9 @@ interface Block {
 
 const props = defineProps<{
     modelValue: Block[];
-    media: Record<number, { id: number; url: string; name: string }>;
+    media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
     mediaUploadUrl?: string;
+    locale: string;
 }>();
 
 const emit = defineEmits<{ 'update:modelValue': [value: Block[]] }>();
@@ -122,6 +123,7 @@ onMounted(() => {
                         v-model:data="block.data"
                         :media="media"
                         :media-upload-url="mediaUploadUrl"
+                        :locale="locale"
                     />
                     <p v-else class="text-[12px] text-ink-500">Unsupported block type: {{ block.type }}</p>
                 </div>

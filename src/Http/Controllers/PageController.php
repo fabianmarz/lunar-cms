@@ -9,6 +9,7 @@ use Inertia\Response;
 use LunarCms\Http\Requests\PageRequest;
 use LunarCms\Models\Page;
 use LunarCms\PageStatus;
+use LunarCms\Support\Languages;
 
 class PageController
 {
@@ -27,13 +28,17 @@ class PageController
             ->when($request->filled('q'), function ($query) use ($request) {
                 $like = '%'.$request->string('q')->value().'%';
 
-                $query->where(fn ($q) => $q->where('title', 'like', $like)->orWhere('slug', 'like', $like));
+                $query->where(function ($q) use ($like) {
+                    foreach (Languages::codes() as $code) {
+                        $q->orWhere("title->{$code}", 'like', $like)->orWhere("slug->{$code}", 'like', $like);
+                    }
+                });
             })
             ->when(
                 in_array($request->string('status')->value(), ['draft', 'published'], true),
                 fn ($query) => $query->where('status', $request->string('status')->value()),
             )
-            ->orderBy($sort, $direction)
+            ->orderBy($sort === 'title' ? 'title->'.Languages::defaultCode() : $sort, $direction)
             ->paginate(25)
             ->withQueryString();
 
@@ -42,8 +47,8 @@ class PageController
 
             return [
                 'id' => $page->id,
-                'title' => $page->title,
-                'slug' => $page->slug,
+                'title' => $page->translate('title'),
+                'slug' => $page->translate('slug'),
                 'status' => $page->status->value,
                 'published_at' => $page->published_at?->toDateTimeString(),
                 '_actions' => [
@@ -75,6 +80,7 @@ class PageController
         return Inertia::render('cms::Pages/Form', [
             'page' => null,
             'media' => [],
+            'languages' => Languages::all(),
             'urls' => [
                 'store' => route('panel.cms.pages.store'),
                 'index' => route('panel.cms.pages.index'),
@@ -98,19 +104,21 @@ class PageController
         return Inertia::render('cms::Pages/Form', [
             'page' => [
                 'id' => $page->id,
-                'title' => $page->title,
-                'slug' => $page->slug,
+                'title' => $page->title ?? (object) [],
+                'slug' => $page->slug ?? (object) [],
                 'status' => $page->status->value,
                 'published_at' => $page->published_at?->format('Y-m-d\TH:i'),
                 'blocks' => $page->blocks ?? [],
             ],
+            'languages' => Languages::all(),
             // Preview URLs for media referenced by the page's blocks — the
             // editor only needs ids and display URLs, not full media models.
-            'media' => $page->getMedia('blocks')
+            'media' => $page->getMedia(config('lunar.media.collection'))
                 ->mapWithKeys(fn ($media) => [$media->id => [
                     'id' => $media->id,
-                    'url' => $media->getUrl(),
-                    'name' => $media->name,
+                    'url' => $media->getAvailableUrl(['small']),
+                    'original_url' => $media->getUrl(),
+                    'name' => $media->file_name,
                 ]]),
             'urls' => [
                 'update' => route('panel.cms.pages.update', $page),

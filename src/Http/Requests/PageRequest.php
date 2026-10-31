@@ -2,12 +2,15 @@
 
 namespace LunarCms\Http\Requests;
 
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use LunarCms\Blocks\BlockRegistry;
+use LunarCms\Models\Page;
 use LunarCms\PageStatus;
+use LunarCms\Support\Languages;
 
 class PageRequest extends FormRequest
 {
@@ -20,13 +23,19 @@ class PageRequest extends FormRequest
     }
 
     /**
-     * Derive the slug from the title when the editor leaves it blank.
+     * Derive each language's slug from its title when the editor leaves it
+     * blank, and drop empty translations so the stored maps stay normalised.
      */
     protected function prepareForValidation(): void
     {
-        if (! $this->filled('slug') && $this->filled('title')) {
-            $this->merge(['slug' => Str::slug($this->string('title')->value())]);
+        $titles = array_filter((array) $this->input('title'), fn ($value) => filled($value));
+        $slugs = array_filter((array) $this->input('slug'), fn ($value) => filled($value));
+
+        foreach ($titles as $code => $title) {
+            $slugs[$code] ??= Str::slug((string) $title);
         }
+
+        $this->merge(['title' => $titles, 'slug' => array_filter($slugs, fn ($value) => filled($value))]);
     }
 
     /**
@@ -36,14 +45,21 @@ class PageRequest extends FormRequest
      */
     public function rules(): array
     {
+        $default = Languages::defaultCode();
+
         return [
-            'title' => ['required', 'string', 'max:255'],
-            'slug' => [
-                'required',
+            'title' => ['required', 'array'],
+            "title.{$default}" => ['required', 'string', 'max:255'],
+            'title.*' => ['string', 'max:255'],
+            'slug' => ['required', 'array'],
+            "slug.{$default}" => ['required'],
+            'slug.*' => [
                 'string',
                 'max:255',
                 'alpha_dash:ascii',
-                Rule::unique('pages', 'slug')->ignore($this->route('page')),
+                fn (string $attribute, mixed $value, Closure $fail) => $this->slugIsTaken($attribute, $value)
+                    ? $fail(__('validation.unique', ['attribute' => 'slug']))
+                    : null,
             ],
             'status' => ['sometimes', Rule::enum(PageStatus::class)],
             'published_at' => ['nullable', 'date'],
@@ -54,6 +70,20 @@ class PageRequest extends FormRequest
             'blocks.*.data' => ['required', 'array'],
             ...$this->blockDataRules(),
         ];
+    }
+
+    /**
+     * Slugs must be unique per language: the same slug may exist in two
+     * languages, but never twice within one.
+     */
+    private function slugIsTaken(string $attribute, mixed $value): bool
+    {
+        $code = Str::after($attribute, 'slug.');
+
+        return Page::query()
+            ->where("slug->{$code}", $value)
+            ->when($this->route('page'), fn ($query, $page) => $query->whereKeyNot($page->getKey()))
+            ->exists();
     }
 
     /**

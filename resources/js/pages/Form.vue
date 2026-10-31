@@ -15,6 +15,8 @@ import {
     type BreadcrumbItem,
 } from '@lunarphp/panel';
 import BlockEditor from '../components/BlockEditor.vue';
+import LanguageSelect from '../components/LanguageSelect.vue';
+import { withTranslation, type LanguageOption, type Translations } from '../translations';
 
 interface Block {
     id: string;
@@ -25,8 +27,8 @@ interface Block {
 
 interface PageForm {
     id: number;
-    title: string;
-    slug: string;
+    title: Translations;
+    slug: Translations;
     status: 'draft' | 'published';
     published_at: string | null;
     blocks: Block[];
@@ -34,7 +36,8 @@ interface PageForm {
 
 const props = defineProps<{
     page: PageForm | null;
-    media: Record<number, { id: number; url: string; name: string }>;
+    media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
+    languages: LanguageOption[];
     urls: { store?: string; update?: string; destroy?: string; media?: string; index: string };
 }>();
 
@@ -42,17 +45,34 @@ const isEdit = computed(() => props.page !== null);
 const confirmingDelete = ref(false);
 
 const form = useForm({
-    title: props.page?.title ?? '',
-    slug: props.page?.slug ?? '',
+    title: props.page?.title ?? {},
+    slug: props.page?.slug ?? {},
     status: props.page?.status ?? 'draft',
     published_at: props.page?.published_at ?? '',
     blocks: props.page?.blocks ?? [],
 });
 
+// One language is edited at a time; every translatable field in the form,
+// blocks included, reads and writes the selected language's value.
+const locale = ref(props.languages.find((language) => language.default)?.code ?? props.languages[0]?.code ?? 'en');
+const defaultLocale = computed(() => props.languages.find((language) => language.default)?.code ?? locale.value);
+
+const title = computed({
+    get: () => form.title[locale.value] ?? '',
+    set: (value: string) => (form.title = withTranslation(form.title, locale.value, value)),
+});
+
+const slug = computed({
+    get: () => form.slug[locale.value] ?? '',
+    set: (value: string) => (form.slug = withTranslation(form.slug, locale.value, value)),
+});
+
+const displayTitle = computed(() => props.page?.title?.[defaultLocale.value] ?? Object.values(props.page?.title ?? {})[0]);
+
 const breadcrumbs = computed<BreadcrumbItem[]>(() => [
     { label: 'Content' },
     { label: 'Pages', href: props.urls.index },
-    { label: props.page?.title || 'New page', current: true },
+    { label: displayTitle.value || 'New page', current: true },
 ]);
 
 const statusOptions = [
@@ -83,15 +103,15 @@ const destroy = (): void => {
             </template>
         </Breadcrumbs>
 
-        <PageHeader :title="page?.title || 'New page'">
+        <PageHeader :title="displayTitle || 'New page'">
             <template #description>
                 <div class="flex gap-2 items-center flex-wrap">
                     <StatusBadge :tone="form.status === 'published' ? 'sage' : 'warn'" dot>
                         {{ form.status === 'published' ? 'Published' : 'Draft' }}
                     </StatusBadge>
-                    <template v-if="page?.slug">
+                    <template v-if="page?.slug?.[defaultLocale]">
                         <span class="text-ink-500">·</span>
-                        <span class="font-mono">/{{ page.slug }}</span>
+                        <span class="font-mono">/{{ page.slug[defaultLocale] }}</span>
                     </template>
                 </div>
             </template>
@@ -120,18 +140,22 @@ const destroy = (): void => {
                                 The page title and the slug it will be reachable at.
                             </p>
                             <div class="space-y-4">
+                                <div v-if="languages.length > 1" class="flex items-center gap-2">
+                                    <FieldLabel>Editing language</FieldLabel>
+                                    <LanguageSelect v-model="locale" :languages="languages" />
+                                </div>
                                 <div>
                                     <FieldLabel>Title</FieldLabel>
-                                    <TextInput v-model="form.title" :invalid="!!form.errors.title" />
-                                    <p v-if="form.errors.title" class="mt-1 text-[11px] text-danger">
-                                        {{ form.errors.title }}
+                                    <TextInput v-model="title" :invalid="!!form.errors[`title.${locale}`] || !!form.errors.title" />
+                                    <p v-if="form.errors[`title.${locale}`] || form.errors.title" class="mt-1 text-[11px] text-danger">
+                                        {{ form.errors[`title.${locale}`] || form.errors.title }}
                                     </p>
                                 </div>
                                 <div>
                                     <FieldLabel hint="Leave empty to derive it from the title">Slug</FieldLabel>
-                                    <TextInput v-model="form.slug" placeholder="e.g. imprint" :invalid="!!form.errors.slug" />
-                                    <p v-if="form.errors.slug" class="mt-1 text-[11px] text-danger">
-                                        {{ form.errors.slug }}
+                                    <TextInput v-model="slug" placeholder="e.g. imprint" :invalid="!!form.errors[`slug.${locale}`]" />
+                                    <p v-if="form.errors[`slug.${locale}`]" class="mt-1 text-[11px] text-danger">
+                                        {{ form.errors[`slug.${locale}`] }}
                                     </p>
                                 </div>
                             </div>
@@ -142,7 +166,7 @@ const destroy = (): void => {
                             <p class="text-xs text-ink-500 max-w-[640px] mb-4">
                                 Compose the page from blocks. Drag to reorder, toggle a block to keep it as draft.
                             </p>
-                            <BlockEditor v-model="form.blocks" :media="media" :media-upload-url="urls.media" />
+                            <BlockEditor v-model="form.blocks" :media="media" :media-upload-url="urls.media" :locale="locale" />
                             <p v-if="form.errors.blocks" class="mt-1 text-[11px] text-danger">{{ form.errors.blocks }}</p>
                         </section>
 
