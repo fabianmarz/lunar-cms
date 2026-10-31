@@ -32,6 +32,8 @@ const styles = `
 .lg\\:grid-cols-\\[minmax\\(0\\,1fr\\)_320px\\]{grid-template-columns:minmax(0,1fr) 320px}
 .lg\\:px-7{padding-inline:1.75rem}.lg\\:sticky{position:sticky}}
 /* component pieces */
+.cms-section:first-child{padding-top:.25rem}.cms-section:last-child{border-bottom:0;padding-bottom:1.75rem}
+.mb-1\\.5{margin-bottom:.375rem}
 .cms-block-add{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);z-index:10;opacity:0;transition:opacity .1s}
 .cms-block:hover .cms-block-add,.cms-block-add:focus-visible{opacity:1}
 .cms-menu{min-width:10rem}

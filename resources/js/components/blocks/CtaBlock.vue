@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { TextInput } from '@lunarphp/panel';
-import { withTranslation, type Translations } from '../../translations';
+import type { LanguageOption, Translations } from '../../translations';
+import TranslatedField from '../TranslatedField.vue';
 
 type CtaData = { label?: Translations; url?: string };
 
-const props = defineProps<{ data: CtaData; locale: string }>();
+const props = defineProps<{ data: CtaData; languages: LanguageOption[] }>();
 const emit = defineEmits<{ 'update:data': [value: CtaData] }>();
 
-const setLabel = (value: string): void => {
-    emit('update:data', { ...props.data, label: withTranslation(props.data.label, props.locale, value) });
+const setLabel = (value: Translations): void => {
+    emit('update:data', { ...props.data, label: value });
 };
 
 const setUrl = (value: string): void => {
@@ -18,7 +19,7 @@ const setUrl = (value: string): void => {
 
 <template>
     <div class="grid grid-cols-2 gap-3">
-        <TextInput :model-value="data.label?.[locale] ?? ''" placeholder="Button label" @update:model-value="setLabel" />
+        <TranslatedField :model-value="data.label" :languages="languages" placeholder="Button label" @update:model-value="setLabel" />
         <TextInput :model-value="data.url ?? ''" placeholder="URL (e.g. /contact)" @update:model-value="setUrl" />
     </div>
 </template>

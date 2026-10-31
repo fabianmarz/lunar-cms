@@ -15,8 +15,9 @@ import {
     type BreadcrumbItem,
 } from '@lunarphp/panel';
 import BlockEditor from '../components/BlockEditor.vue';
-import LanguageSelect from '../components/LanguageSelect.vue';
-import { withTranslation, type LanguageOption, type Translations } from '../translations';
+import Section from '../components/Section.vue';
+import TranslatedField from '../components/TranslatedField.vue';
+import type { LanguageOption, Translations } from '../translations';
 
 interface Block {
     id: string;
@@ -52,20 +53,11 @@ const form = useForm({
     blocks: props.page?.blocks ?? [],
 });
 
-// One language is edited at a time; every translatable field in the form,
-// blocks included, reads and writes the selected language's value.
-const locale = ref(props.languages.find((language) => language.default)?.code ?? props.languages[0]?.code ?? 'en');
-const defaultLocale = computed(() => props.languages.find((language) => language.default)?.code ?? locale.value);
+const defaultLocale = computed(() => props.languages.find((language) => language.default)?.code ?? props.languages[0]?.code ?? 'en');
 
-const title = computed({
-    get: () => form.title[locale.value] ?? '',
-    set: (value: string) => (form.title = withTranslation(form.title, locale.value, value)),
-});
-
-const slug = computed({
-    get: () => form.slug[locale.value] ?? '',
-    set: (value: string) => (form.slug = withTranslation(form.slug, locale.value, value)),
-});
+// Validation errors are keyed per language (`title.en`); surface the first.
+const fieldError = (field: 'title' | 'slug'): string | undefined =>
+    form.errors[field] ?? Object.entries(form.errors).find(([key]) => key.startsWith(`${field}.`))?.[1];
 
 const displayTitle = computed(() => props.page?.title?.[defaultLocale.value] ?? Object.values(props.page?.title ?? {})[0]);
 
@@ -134,41 +126,27 @@ const destroy = (): void => {
             <form id="cms-page-form" @submit.prevent="submit">
                 <div class="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_320px]">
                     <div class="min-w-0">
-                        <section class="pb-6 border-b border-line">
-                            <h2 class="text-sm font-semibold tracking-[-0.01em] text-ink-900 mb-1">Details</h2>
-                            <p class="text-xs text-ink-500 max-w-[640px] mb-4">
-                                The page title and the slug it will be reachable at.
-                            </p>
+                        <Section title="Details">
+                            <template #desc>The page title and the slug it will be reachable at.</template>
                             <div class="space-y-4">
-                                <div v-if="languages.length > 1" class="flex items-center gap-2">
-                                    <FieldLabel>Editing language</FieldLabel>
-                                    <LanguageSelect v-model="locale" :languages="languages" />
-                                </div>
                                 <div>
                                     <FieldLabel>Title</FieldLabel>
-                                    <TextInput v-model="title" :invalid="!!form.errors[`title.${locale}`] || !!form.errors.title" />
-                                    <p v-if="form.errors[`title.${locale}`] || form.errors.title" class="mt-1 text-[11px] text-danger">
-                                        {{ form.errors[`title.${locale}`] || form.errors.title }}
-                                    </p>
+                                    <TranslatedField v-model="form.title" :languages="languages" :invalid="!!fieldError('title')" />
+                                    <p v-if="fieldError('title')" class="mt-1 text-[11px] text-danger">{{ fieldError('title') }}</p>
                                 </div>
                                 <div>
                                     <FieldLabel hint="Leave empty to derive it from the title">Slug</FieldLabel>
-                                    <TextInput v-model="slug" placeholder="e.g. imprint" :invalid="!!form.errors[`slug.${locale}`]" />
-                                    <p v-if="form.errors[`slug.${locale}`]" class="mt-1 text-[11px] text-danger">
-                                        {{ form.errors[`slug.${locale}`] }}
-                                    </p>
+                                    <TranslatedField v-model="form.slug" :languages="languages" placeholder="e.g. imprint" :invalid="!!fieldError('slug')" />
+                                    <p v-if="fieldError('slug')" class="mt-1 text-[11px] text-danger">{{ fieldError('slug') }}</p>
                                 </div>
                             </div>
-                        </section>
+                        </Section>
 
-                        <section class="pt-6">
-                            <h2 class="text-sm font-semibold tracking-[-0.01em] text-ink-900 mb-1">Content</h2>
-                            <p class="text-xs text-ink-500 max-w-[640px] mb-4">
-                                Compose the page from blocks. Drag to reorder, toggle a block to keep it as draft.
-                            </p>
-                            <BlockEditor v-model="form.blocks" :media="media" :media-upload-url="urls.media" :locale="locale" />
+                        <Section title="Content">
+                            <template #desc>Compose the page from blocks. Drag to reorder, toggle a block to keep it as draft.</template>
+                            <BlockEditor v-model="form.blocks" :media="media" :media-upload-url="urls.media" :languages="languages" />
                             <p v-if="form.errors.blocks" class="mt-1 text-[11px] text-danger">{{ form.errors.blocks }}</p>
-                        </section>
+                        </Section>
 
                         <PageZone region="main" position="after" />
                     </div>

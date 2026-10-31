@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Button, TextInput } from '@lunarphp/panel';
-import { withTranslation, type Translations } from '../../translations';
+import { Button } from '@lunarphp/panel';
+import type { LanguageOption, Translations } from '../../translations';
+import TranslatedField from '../TranslatedField.vue';
 
 type ImageData = { media_id?: number | null; alt?: Translations };
 
@@ -9,7 +10,7 @@ const props = defineProps<{
     data: ImageData;
     media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
     mediaUploadUrl?: string;
-    locale: string;
+    languages: LanguageOption[];
 }>();
 
 const emit = defineEmits<{ 'update:data': [value: ImageData] }>();
@@ -65,15 +66,15 @@ const upload = async (event: Event): Promise<void> => {
     }
 };
 
-const setAlt = (alt: string): void => {
-    emit('update:data', { ...props.data, alt: withTranslation(props.data.alt, props.locale, alt) });
+const setAlt = (alt: Translations): void => {
+    emit('update:data', { ...props.data, alt });
 };
 </script>
 
 <template>
     <div class="space-y-2">
         <div v-if="current" class="flex items-center gap-3">
-            <img :src="current.url" :alt="data.alt?.[locale] ?? ''" class="h-16 w-16 rounded-md object-cover border border-line" />
+            <img :src="current.url" :alt="Object.values(data.alt ?? {})[0] ?? ''" class="h-16 w-16 rounded-md object-cover border border-line" />
             <span class="text-[12px] text-ink-500 truncate">{{ current.name }}</span>
         </div>
 
@@ -88,10 +89,6 @@ const setAlt = (alt: string): void => {
         </div>
         <p v-else class="text-[11px] text-ink-400">Save the page first — uploads need a page to attach to.</p>
 
-        <TextInput
-            :model-value="data.alt?.[locale] ?? ''"
-            placeholder="Alt text"
-            @update:model-value="setAlt"
-        />
+        <TranslatedField :model-value="data.alt" :languages="languages" placeholder="Alt text" @update:model-value="setAlt" />
     </div>
 </template>

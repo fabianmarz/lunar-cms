@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from 'vue';
+import { onBeforeUnmount, ref, watch } from 'vue';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import { Button } from '@lunarphp/panel';
-import { withTranslation, type Translations } from '../../translations';
+import { withTranslation, type LanguageOption, type Translations } from '../../translations';
 
 type RichTextData = { content?: Translations };
 
-const props = defineProps<{ data: RichTextData; locale: string }>();
+const props = defineProps<{ data: RichTextData; languages: LanguageOption[] }>();
 const emit = defineEmits<{ 'update:data': [value: RichTextData] }>();
 
-const currentHtml = (): string => props.data.content?.[props.locale] ?? '';
+// Per-field language picker, as on the panel's translated rich text fields.
+const activeCode = ref(props.languages.find((language) => language.default)?.code ?? props.languages[0]?.code ?? 'en');
+
+const currentHtml = (): string => props.data.content?.[activeCode.value] ?? '';
 
 // Stores HTML per language, like the panel's own rich text fields, so the
 // value renders on the storefront without a document-to-HTML step.
@@ -20,14 +23,14 @@ const editor = useEditor({
     onUpdate: ({ editor: instance }) => {
         emit('update:data', {
             ...props.data,
-            content: withTranslation(props.data.content, props.locale, instance.isEmpty ? '' : instance.getHTML()),
+            content: withTranslation(props.data.content, activeCode.value, instance.isEmpty ? '' : instance.getHTML()),
         });
     },
 });
 
 // Switching language swaps the document the editor shows.
 watch(
-    () => props.locale,
+    activeCode,
     () => editor.value?.commands.setContent(currentHtml(), { emitUpdate: false }),
 );
 
@@ -58,6 +61,18 @@ const active = 'bg-surface border-line-strong shadow-sm';
 </script>
 
 <template>
+    <div>
+        <div v-if="languages.length > 1" class="flex mb-1.5">
+            <select
+                v-model="activeCode"
+                class="h-[22px] px-1 border border-line-strong rounded-md bg-surface-2 text-[10.5px] font-mono uppercase tracking-wide text-ink-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sage/35"
+                aria-label="Language"
+            >
+                <option v-for="language in languages" :key="language.code" :value="language.code" :title="language.name ?? language.code">
+                    {{ language.code.toUpperCase() }}
+                </option>
+            </select>
+        </div>
     <div
         class="border rounded-md overflow-hidden bg-surface border-line-strong hover:border-ink-300 focus-within:border-sage focus-within:ring-3 focus-within:ring-sage/35 transition-[border-color,box-shadow] duration-100"
     >
@@ -78,5 +93,6 @@ const active = 'bg-surface border-line-strong shadow-sm';
         <div class="px-2.5 py-2 text-[13px] text-ink-900 leading-normal">
             <EditorContent :editor="editor" />
         </div>
+    </div>
     </div>
 </template>
