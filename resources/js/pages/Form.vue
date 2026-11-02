@@ -38,6 +38,16 @@ interface PageForm {
 const props = defineProps<{
     page: PageForm | null;
     media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
+    blockTypes: Record<
+        string,
+        {
+            label: string;
+            icon: string;
+            editor?: string | null;
+            fields: { key: string; type: string; label: string; required?: boolean; cols?: number }[];
+            defaults: Record<string, unknown>;
+        }
+    >;
     languages: LanguageOption[];
     urls: {
         store?: string;
@@ -190,7 +200,8 @@ const destroy = (): void => {
                                     </option>
                                 </select>
                             </template>
-                            <BlockEditor :key="contentLocale" v-model="blocks" :media="media"
+                            <BlockEditor :key="contentLocale" v-model="blocks" :block-types="blockTypes"
+                                :locale="contentLocale" :errors="form.errors" :media="media"
                                 :media-upload-url="urls.media"
                                 :media-picker-url="urls.mediaPicker"
                                 :media-library-upload-url="urls.mediaLibraryUpload"

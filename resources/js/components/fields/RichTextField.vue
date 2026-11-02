@@ -4,22 +4,18 @@ import { EditorContent, useEditor } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import { Button } from '@lunarphp/panel';
 
-type RichTextData = { content?: string };
-
-const props = defineProps<{ data: RichTextData }>();
-const emit = defineEmits<{ 'update:data': [value: RichTextData] }>();
+const props = defineProps<{ modelValue: string }>();
+const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
 // Stores HTML, like the panel's own rich text fields, so the value renders
 // on the storefront without a document-to-HTML step. The editor is remounted
-// when the content language changes, so it only ever holds one block's value.
+// when the content language changes (BlockEditor is keyed by locale), so it
+// only ever holds one block's value.
 const editor = useEditor({
-    content: props.data.content ?? '',
+    content: props.modelValue,
     extensions: [StarterKit],
     onUpdate: ({ editor: instance }) => {
-        emit('update:data', {
-            ...props.data,
-            content: instance.isEmpty ? '' : instance.getHTML(),
-        });
+        emit('update:modelValue', instance.isEmpty ? '' : instance.getHTML());
     },
 });
 
@@ -64,7 +60,6 @@ const active = 'bg-surface border-line-strong shadow-sm';
             <Button variant="ghost" size="sm" :class="editor.isActive('bulletList') ? active : ''" aria-label="Bullet list" @click="editor.chain().focus().toggleBulletList().run()">• List</Button>
             <Button variant="ghost" size="sm" :class="editor.isActive('orderedList') ? active : ''" aria-label="Numbered list" @click="editor.chain().focus().toggleOrderedList().run()">1. List</Button>
             <Button variant="ghost" size="sm" :class="editor.isActive('blockquote') ? active : ''" aria-label="Quote" @click="editor.chain().focus().toggleBlockquote().run()">“ ”</Button>
-            <div class="w-px bg-line my-0.5 mx-1" />
             <Button variant="ghost" size="sm" icon="link" :class="editor.isActive('link') ? active : ''" aria-label="Link" @click="setLink" />
         </div>
         <div class="px-2.5 py-2 text-[13px] text-ink-900 leading-normal">

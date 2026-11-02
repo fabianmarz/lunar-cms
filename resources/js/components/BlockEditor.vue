@@ -2,7 +2,8 @@
 import { computed, onMounted, ref } from 'vue';
 import Sortable from 'sortablejs';
 import { Icon, Toggle } from '@lunarphp/panel';
-import { blockTypes } from '../blocks';
+import { customEditors } from '../blocks';
+import BlockFields, { type BlockField } from './BlockFields.vue';
 
 interface Block {
     id: string;
@@ -11,8 +12,19 @@ interface Block {
     data: Record<string, unknown>;
 }
 
+interface BlockType {
+    label: string;
+    icon: string;
+    editor?: string | null;
+    fields: BlockField[];
+    defaults: Record<string, unknown>;
+}
+
 const props = defineProps<{
     modelValue: Block[];
+    blockTypes: Record<string, BlockType>;
+    locale: string;
+    errors?: Record<string, string>;
     media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
     mediaUploadUrl?: string;
     mediaPickerUrl?: string | null;
@@ -42,7 +54,7 @@ const insert = (index: number, type: string): void => {
         id: crypto.randomUUID(),
         type,
         enabled: true,
-        data: blockTypes[type].defaults(),
+        data: { ...props.blockTypes[type].defaults },
     });
     blocks.value = next;
     menu.value = null;
@@ -52,7 +64,26 @@ const remove = (id: string): void => {
     blocks.value = blocks.value.filter((b) => b.id !== id);
 };
 
-const meta = (type: string) => blockTypes[type] ?? { label: type, icon: 'alert', component: null };
+const meta = (type: string): BlockType =>
+    props.blockTypes[type] ?? { label: type, icon: 'alert', editor: null, fields: [], defaults: {} };
+
+const customEditor = (type: string) => {
+    const name = meta(type).editor;
+
+    return name ? (customEditors as Record<string, unknown>)[name] : null;
+};
+
+// Validation errors arrive keyed `blocks.{locale}.{i}.data.{field}` — slice
+// them down to the field map a single block's renderer expects.
+const fieldErrors = (index: number): Record<string, string> => {
+    const prefix = `blocks.${props.locale}.${index}.data.`;
+
+    return Object.fromEntries(
+        Object.entries(props.errors ?? {})
+            .filter(([key]) => key.startsWith(prefix))
+            .map(([key, value]) => [key.slice(prefix.length), value]),
+    );
+};
 
 // SortableJS direct — vuedraggable self-registers via window.Vue.component(),
 // which throws against the panel's shared Vue namespace global.
@@ -119,13 +150,20 @@ onMounted(() => {
                 </div>
                 <div class="p-3">
                     <component
-                        :is="meta(block.type).component"
-                        v-if="meta(block.type).component"
+                        :is="customEditor(block.type)"
+                        v-if="customEditor(block.type)"
                         v-model:data="block.data"
+                        :errors="fieldErrors(i)"
                         :media="media"
                         :media-upload-url="mediaUploadUrl"
                         :media-picker-url="mediaPickerUrl"
                         :media-library-upload-url="mediaLibraryUploadUrl"
+                    />
+                    <BlockFields
+                        v-else-if="meta(block.type).fields.length"
+                        :fields="meta(block.type).fields"
+                        :data="block.data"
+                        :errors="fieldErrors(i)"
                     />
                     <p v-else class="text-[12px] text-ink-500">Unsupported block type: {{ block.type }}</p>
                 </div>

@@ -6,6 +6,7 @@ type ImageData = { media_id?: number | null; alt?: string };
 
 const props = defineProps<{
     data: ImageData;
+    errors?: Record<string, string>;
     media: Record<number, { id: number; url: string; original_url?: string; name: string }>;
     mediaUploadUrl?: string;
     mediaPickerUrl?: string | null;
@@ -124,6 +125,11 @@ const setAlt = (alt: string): void => {
         </div>
         <p v-else class="text-[11px] text-ink-400">Save the page first — uploads need a page to attach to.</p>
 
-        <TextInput :model-value="data.alt ?? ''" placeholder="Alt text" @update:model-value="setAlt" />
+        <p v-if="errors?.media_id" class="text-[11px] text-danger">{{ errors.media_id }}</p>
+
+        <div>
+            <TextInput :model-value="data.alt ?? ''" placeholder="Alt text" :invalid="!!errors?.alt" @update:model-value="setAlt" />
+            <p v-if="errors?.alt" class="mt-1 text-[11px] text-danger">{{ errors.alt }}</p>
+        </div>
     </div>
 </template>
