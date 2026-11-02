@@ -29,7 +29,13 @@ class BlockRegistry
                 'label' => 'Rich text',
                 'icon' => 'type',
                 'fields' => [
-                    ['key' => 'content', 'type' => 'richtext', 'label' => 'Content', 'required' => true, 'cols' => 2],
+                    [
+                        'key' => 'content',
+                        'type' => 'richtext',
+                        'label' => 'Content',
+                        'required' => true,
+                        'cols' => 2,
+                    ],
                 ],
             ],
             'image' => [
@@ -46,8 +52,22 @@ class BlockRegistry
                 'label' => 'Button',
                 'icon' => 'link',
                 'fields' => [
-                    ['key' => 'label', 'type' => 'text', 'label' => 'Button label', 'required' => true, 'cols' => 1, 'rules' => ['max:255']],
-                    ['key' => 'url', 'type' => 'text', 'label' => 'URL', 'required' => true, 'cols' => 1, 'rules' => ['max:2048']],
+                    [
+                        'key' => 'label',
+                        'type' => 'text',
+                        'label' => 'Button label',
+                        'required' => true,
+                        'cols' => 1,
+                        'rules' => ['max:255'],
+                    ],
+                    [
+                        'key' => 'url',
+                        'type' => 'text',
+                        'label' => 'URL',
+                        'required' => true,
+                        'cols' => 1,
+                        'rules' => ['max:2048'],
+                    ],
                 ],
             ],
         ];
