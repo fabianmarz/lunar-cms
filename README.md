@@ -30,11 +30,11 @@ app root. Tests: `php artisan test --filter=Cms`.
 ## Architecture
 
 ```
-BlockRegistry::types()          PageController            BlockEditor.vue
+BlockRegistry (type => Block class)   PageController          BlockEditor.vue
 ┌─────────────────────┐   Inertia ┌───────────────┐        ┌──────────────────────────┐
-│ label, icon         │ ─prop──▶  │ blockTypes    │ ────▶  │ insert menu, labels,     │
-│ fields[]      ──────┼─────────▶ │  (schema)     │        │ defaults, card chrome    │
-│   or editor + rules │           └───────────────┘        └──────────┬───────────────┘
+│ 'cta' => CtaBlock   │ ─prop──▶  │ blockTypes    │ ────▶  │ insert menu, labels,     │
+│ Block: label, icon  │           │  (schema)     │        │ defaults, card chrome    │
+│   fields()/editor() │           └───────────────┘        └──────────┬───────────────┘
 └─────────────────────┘                                               │ per block
                                             ┌─────────────────────────┴──────────────┐
                                             │ editor set? → customEditors[name]      │
@@ -45,49 +45,57 @@ BlockRegistry::types()          PageController            BlockEditor.vue
 
 `PageRequest` derives validation from the same registry
 (`blocks.{locale}.{i}.data.{key}`), so a field's rules live exactly once — in
-the field declaration. Stored data shape is `{id, type, enabled, data}` per
-block, nested under `pages.blocks` per locale. No data migration is needed when
+its field class. Stored data shape is `{id, type, enabled, data}` per block,
+nested under `pages.blocks` per locale. No data migration is needed when
 adding a type.
 
 ## Adding a block (pure PHP)
 
-Declare it in `packages/cms/src/Blocks/BlockRegistry.php`:
+Create a `Block` subclass in `src/Blocks/` and register it:
 
 ```php
-'quote' => [
-    'label' => 'Quote',
-    'icon' => 'fileText',
-    'fields' => [
-        [
-            'key' => 'text',
-            'type' => 'textarea',
-            'label' => 'Quote',
-            'required' => true,
-            'cols' => 2,
-        ],
-        [
-            'key' => 'cite',
-            'type' => 'text',
-            'label' => 'Citation',
-            'required' => false,
-            'cols' => 1,
-            'rules' => ['max:120'],
-        ],
-        [
-            'key' => 'variant',
-            'type' => 'select',
-            'label' => 'Style',
-            'required' => true,
-            'cols' => 1,
-            'config' => [
-                'options' => [
+namespace LunarCms\Blocks;
+
+use LunarCms\Fields\Select;
+use LunarCms\Fields\Text;
+use LunarCms\Fields\Textarea;
+
+class QuoteBlock extends Block
+{
+    public function label(): string
+    {
+        return 'Quote';
+    }
+
+    public function icon(): string
+    {
+        return 'fileText';
+    }
+
+    public function fields(): array
+    {
+        return [
+            Textarea::make('text', 'Quote')
+                ->required()
+                ->cols(2),
+            Text::make('cite', 'Citation')
+                ->cols(1)
+                ->rules(['max:120']),
+            Select::make('variant', 'Style')
+                ->required()
+                ->cols(1)
+                ->options([
                     ['label' => 'Default', 'value' => 'default'],
                     ['label' => 'Highlight', 'value' => 'highlight'],
-                ],
-            ],
-        ],
-    ],
-],
+                ]),
+        ];
+    }
+}
+```
+
+```php
+// CmsServiceProvider::boot(), or any provider in another package
+BlockRegistry::register('quote', QuoteBlock::class);
 ```
 
 That is the whole job: the type appears in the insert menu, renders inputs,
@@ -95,30 +103,31 @@ seeds defaults and validates — no Vue changes. `icon` must be one of the names
 in the panel `Icon.vue`'s `ICONS` map (closed set — `fileText`, `image`,
 `link`, `type`, `flag`, `palette`, …); unknown names render nothing.
 
-### Field schema keys
+### Field builder API
 
-| Key        | Meaning |
-|------------|---------|
-| `key`      | Property written into `block.data` |
-| `type`     | One of the registered field types (below) |
-| `label`    | Shown above the input |
-| `required` | `required` vs `nullable` in derived rules; asterisk in the UI |
-| `cols`     | Columns in the 2-column grid: `1` = half width, `2` = full (default) |
-| `config`   | Type-specific options — e.g. `options` for `select` (also feeds `Rule::in`) |
-| `default`  | Initial value for new blocks (falls back to the type's implicit default) |
-| `rules`    | Extra Laravel rules merged after the derived base |
+`Field::make(key, label)` starts every field; each method returns the field
+for chaining:
+
+| Method       | Effect |
+|--------------|--------|
+| `required()` | `required` vs `nullable` in derived rules; asterisk in the UI |
+| `cols(int)`  | Columns in the 2-column grid: `1` = half width, `2` = full (default) |
+| `rules([])`  | Extra Laravel rules merged after the type's base |
+| `default($v)`| Initial value for new blocks (falls back to the type's implicit default) |
+| `config([])` | Type-specific config shipped to the renderer |
+| `options([])`| `Select` only — options list, also feeds `Rule::in` |
 
 ### Built-in field types
 
-| Type       | Renders     | Base rule | Notes |
-|------------|-------------|-----------|-------|
-| `text`     | TextInput   | `string`  | |
-| `url`      | TextInput (`type=url`) | `string` | |
-| `number`   | TextInput (`type=number`) | `numeric` | empty → `null`, else coerced to `Number` |
-| `textarea` | Textarea    | `string`  | |
-| `select`   | Select      | `Rule::in(config.options)` | options via `config.options` |
-| `toggle`   | Toggle      | `boolean` | |
-| `richtext` | TipTap editor | `string` | stores HTML |
+| Type       | PHP class          | Renders     | Base rule | Notes |
+|------------|--------------------|-------------|-----------|-------|
+| `text`     | `Fields\Text`      | TextInput   | `string`  | |
+| `url`      | `Fields\Url`       | TextInput (`type=url`) | `string` | |
+| `number`   | `Fields\Number`    | TextInput (`type=number`) | `numeric` | empty → `null`, else coerced to `Number` |
+| `textarea` | `Fields\Textarea`  | Textarea    | `string`  | |
+| `select`   | `Fields\Select`    | Select      | `Rule::in(options)` | options via `->options()` |
+| `toggle`   | `Fields\Toggle`    | Toggle      | `boolean` | |
+| `richtext` | `Fields\RichText`  | TipTap editor | `string` | stores HTML |
 
 Validation is derived as `[required|nullable, <base>, ...custom rules]` — the
 `cta` type's `['required', 'string', 'max:255']` is a derived example.
@@ -126,17 +135,18 @@ Validation is derived as `[required|nullable, <base>, ...custom rules]` — the
 ## Custom block editor (escape hatch)
 
 When a block needs behavior a schema can't express (the `image` block needs a
-media picker), declare it with `editor` + `rules` + `defaults` instead of
-`fields`:
+media picker), override `editor()` and keep verbatim `rules()`/`defaults()`:
 
 ```php
-'image' => [
-    'label' => 'Image',
-    'icon' => 'image',
-    'editor' => 'image',          // name looked up in customEditors
-    'rules' => [...],
-    'defaults' => ['media_id' => null, 'alt' => ''],
-],
+class ImageBlock extends Block
+{
+    public function label(): string { return 'Image'; }
+    public function icon(): string { return 'image'; }
+    public function editor(): ?string { return 'image'; } // name looked up in customEditors
+
+    public function rules(): array { /* ... */ }
+    public function defaults(): array { /* ... */ }
+}
 ```
 
 Then register the component in `resources/js/blocks/index.js`:
@@ -166,10 +176,27 @@ defineEmits<{ 'update:data': [value: ...] }>();
 Update via `emit('update:data', {...props.data, alt: value})` — `BlockEditor`
 binds `v-model:data`.
 
-## Adding a field type (JS)
+## Adding a field type
 
-Field types are components resolved through `fieldTypes` in
-`resources/js/components/fields/index.ts` — the JS mirror of `BlockRegistry`.
+A field type is two halves: a PHP `Field` subclass (`src/Fields/`) that owns
+`type()`, base rules and default; and a JS renderer resolved through
+`fieldTypes` in `resources/js/components/fields/index.ts` — the JS mirror of
+the PHP registry.
+
+1. Create the PHP side:
+
+```php
+class Color extends Field
+{
+    public function type(): string
+    {
+        return 'color';
+    }
+    // baseRules() → ['string'] unless the type needs a different default.
+}
+```
+
+2. Create `components/fields/ColorField.vue` implementing the uniform contract:
 
 1. Create `components/fields/MyField.vue` implementing the uniform contract:
 
@@ -191,7 +218,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 </template>
 ```
 
-2. Register it — either statically in `fieldTypes`:
+3. Register the renderer — either statically in `fieldTypes`:
 
 ```ts
 export const fieldTypes = shallowReactive<Record<string, Component>>({
@@ -208,8 +235,7 @@ import { registerFieldType } from 'cms/components/fields';
 registerFieldType('color', ColorField);
 ```
 
-3. Use `'type' => 'color'` in the PHP schema. Add a base rule for the new type
-in `BlockRegistry::fieldRules()` if `string` isn't the right default.
+4. Use it in any block: `Color::make('accent', 'Accent color')`.
 
 `BlockField` lives in `components/fields/types.ts`; `fieldString()` there is
 the shared `unknown → string` coercion for text-like inputs.
