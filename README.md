@@ -5,6 +5,12 @@ block-based content editor. Blocks are **schema-driven** — a PHP declaration
 produces the insert-menu entry, the rendered inputs, the defaults and the
 validation rules. Most new block types need zero JavaScript.
 
+## Screenshots
+
+| Pages index | Schema-driven block editor | Insert menu |
+|---|---|---|
+| ![Pages index](docs/screenshots/pages-index.png) | ![Block editor — fields rendered from the PHP schema](docs/screenshots/block-editor.png) | ![Block insert menu](docs/screenshots/block-insert-menu.png) |
+
 ## Setup
 
 The package is wired into the app via a `path` composer repository
