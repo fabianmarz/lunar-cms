@@ -103,7 +103,7 @@ class PageRequest extends FormRequest
                 $type = $block['type'] ?? null;
 
                 if (is_string($type) && BlockRegistry::has($type)) {
-                    foreach (BlockRegistry::types()[$type]['rules'] as $field => $fieldRules) {
+                    foreach (BlockRegistry::rules($type) as $field => $fieldRules) {
                         $rules["blocks.{$code}.{$index}.data.{$field}"] = $fieldRules;
                     }
                 }

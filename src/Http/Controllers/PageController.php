@@ -8,6 +8,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
+use LunarCms\Blocks\BlockRegistry;
 use LunarCms\Http\Requests\PageRequest;
 use LunarCms\Models\Page;
 use LunarCms\PageStatus;
@@ -83,6 +84,7 @@ class PageController
         return Inertia::render('cms::Pages/Form', [
             'page' => null,
             'media' => [],
+            'blockTypes' => BlockRegistry::schema(),
             'languages' => Languages::all(),
             'urls' => [
                 'store' => route('panel.cms.pages.store'),
@@ -113,6 +115,7 @@ class PageController
                 'published_at' => $page->published_at?->format('Y-m-d\TH:i'),
                 'blocks' => $page->blocks ?: (object) [],
             ],
+            'blockTypes' => BlockRegistry::schema(),
             'languages' => Languages::all(),
             // Preview URLs for the page's own images plus any library file its
             // image blocks reference — the editor only needs ids and display URLs.
