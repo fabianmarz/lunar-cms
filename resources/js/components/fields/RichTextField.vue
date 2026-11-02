@@ -3,8 +3,9 @@ import { onBeforeUnmount } from 'vue';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import { Button } from '@lunarphp/panel';
+import type { BlockField } from './types';
 
-const props = defineProps<{ modelValue: string }>();
+const props = defineProps<{ field?: BlockField; modelValue?: unknown; invalid?: boolean }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
 // Stores HTML, like the panel's own rich text fields, so the value renders
@@ -12,7 +13,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 // when the content language changes (BlockEditor is keyed by locale), so it
 // only ever holds one block's value.
 const editor = useEditor({
-    content: props.modelValue,
+    content: typeof props.modelValue === 'string' ? props.modelValue : '',
     extensions: [StarterKit],
     onUpdate: ({ editor: instance }) => {
         emit('update:modelValue', instance.isEmpty ? '' : instance.getHTML());
@@ -47,7 +48,8 @@ const active = 'bg-surface border-line-strong shadow-sm';
 
 <template>
     <div
-        class="border rounded-md overflow-hidden bg-surface border-line-strong hover:border-ink-300 focus-within:border-sage focus-within:ring-3 focus-within:ring-sage/35 transition-[border-color,box-shadow] duration-100"
+        class="border rounded-md overflow-hidden bg-surface hover:border-ink-300 focus-within:border-sage focus-within:ring-3 focus-within:ring-sage/35 transition-[border-color,box-shadow] duration-100"
+        :class="invalid ? 'border-danger' : 'border-line-strong'"
     >
         <div v-if="editor" class="flex flex-wrap gap-0.5 px-2 py-1.5 border-b border-line bg-surface-2">
             <Button variant="ghost" size="sm" :class="editor.isActive('bold') ? active : ''" aria-label="Bold" @click="editor.chain().focus().toggleBold().run()"><b>B</b></Button>
