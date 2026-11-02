@@ -150,7 +150,7 @@ const destroy = (): void => {
         </PageHeader>
 
         <div class="px-4 sm:px-5 lg:px-7 max-w-[1400px] w-full mx-auto pt-5 pb-7">
-            <PageZone region="main" position="before" />
+            <PageZone region="main" position="before" :page="page" />
 
             <form id="cms-page-form" @submit.prevent="submit">
                 <div class="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -170,6 +170,8 @@ const destroy = (): void => {
                                 </div>
                             </div>
                         </Section>
+
+                        <PageZone region="details" position="after" :page="page" />
 
                         <Section title="Content">
                             <template #desc>Compose the page from blocks. Drag to reorder, toggle a block to keep it as draft.</template>
@@ -196,12 +198,14 @@ const destroy = (): void => {
                             <p v-if="form.errors.blocks" class="mt-1 text-[11px] text-danger">{{ form.errors.blocks }}</p>
                         </Section>
 
-                        <PageZone region="main" position="after" />
+                        <PageZone region="content" position="after" :page="page" />
+
+                        <PageZone region="main" position="after" :page="page" />
                     </div>
 
                     <aside>
                         <div class="lg:sticky lg:top-[60px] flex flex-col gap-4">
-                            <PageZone region="sidebar" position="before" />
+                            <PageZone region="sidebar" position="before" :page="page" />
 
                             <SideCard title="Publication">
                                 <div class="grid grid-flow-col auto-cols-fr gap-1 p-1 bg-surface-2 border border-line rounded-lg" role="radiogroup">
@@ -234,7 +238,7 @@ const destroy = (): void => {
                                 </div>
                             </SideCard>
 
-                            <PageZone region="sidebar" position="after" />
+                            <PageZone region="sidebar" position="after" :page="page" />
                         </div>
                     </aside>
                 </div>
