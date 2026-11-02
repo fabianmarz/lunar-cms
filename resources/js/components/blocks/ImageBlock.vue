@@ -37,6 +37,10 @@ const uploadError = ref('');
 
 const current = computed(() => (props.data.media_id ? props.media[props.data.media_id] : null));
 
+// A referenced file that is no longer in the media map was deleted (for
+// example together with the entity that owned it).
+const missing = computed(() => !!props.data.media_id && !current.value);
+
 // Uploads bypass the Inertia router — the media endpoint returns plain JSON,
 // which the Inertia client would reject. Same XSRF pattern as the panel's http lib.
 const xsrfToken = (): string => {
@@ -93,6 +97,10 @@ const setAlt = (alt: string): void => {
             <img :src="current.url" :alt="data.alt ?? ''" class="h-16 w-16 rounded-md object-cover border border-line" />
             <span class="text-[12px] text-ink-500 truncate">{{ current.name }}</span>
         </div>
+
+        <p v-if="missing" class="rounded-md border border-danger px-3 py-2 text-[12px] text-danger">
+            File missing: it was deleted. Choose or upload a replacement.
+        </p>
 
         <div v-if="canPick" class="flex items-center gap-2">
             <Button icon="image" @click="pickerOpen = true">Choose from library</Button>

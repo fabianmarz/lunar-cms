@@ -2,6 +2,7 @@
 
 namespace LunarCms\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Lunar\Core\Models\Concerns\HasMedia;
 use Lunar\Core\Models\Concerns\HasTranslations;
@@ -60,6 +61,31 @@ class Page extends Model implements SpatieHasMedia
         return $blocks[$locale ?? app()->getLocale()]
             ?? $blocks[Languages::defaultCode()]
             ?? [];
+    }
+
+    /**
+     * Other pages whose image blocks (any language, enabled or not) reference
+     * one of this page's own images. Deleting this page would delete those
+     * files and leave the other blocks pointing at nothing.
+     *
+     * @return Collection<int, Page>
+     */
+    public function pagesReferencingOwnMedia(): Collection
+    {
+        $own = $this->getMedia(config('lunar.media.collection'))->pluck('id')->map(fn ($id) => (int) $id);
+
+        if ($own->isEmpty()) {
+            return new Collection;
+        }
+
+        return static::query()
+            ->whereKeyNot($this->getKey())
+            ->get()
+            ->filter(fn (Page $other): bool => collect($other->blocks ?? [])
+                ->flatten(1)
+                ->contains(fn ($block): bool => ($block['type'] ?? null) === 'image'
+                    && $own->contains((int) ($block['data']['media_id'] ?? 0))))
+            ->values();
     }
 
     public function publish(): void

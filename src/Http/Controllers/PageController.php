@@ -163,6 +163,15 @@ class PageController
 
     public function destroy(Page $page): RedirectResponse
     {
+        $referencing = $page->pagesReferencingOwnMedia();
+
+        if ($referencing->isNotEmpty()) {
+            return back()->with('error', sprintf(
+                "This page's images are used by: %s. Remove them from those pages first.",
+                $referencing->map(fn (Page $other) => $other->translate('title'))->implode(', '),
+            ));
+        }
+
         $page->delete();
 
         return redirect()
