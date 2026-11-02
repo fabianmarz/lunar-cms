@@ -11,16 +11,39 @@ validation rules. Most new block types need zero JavaScript.
 |---|---|---|
 | ![Pages index](docs/screenshots/pages-index.png) | ![Block editor — fields rendered from the PHP schema](docs/screenshots/block-editor.png) | ![Block insert menu](docs/screenshots/block-insert-menu.png) |
 
-## Setup
+## Installation
 
-The package is wired into the app via a `path` composer repository
-(`packages/cms`, namespace `LunarCms\`). `CmsServiceProvider` registers the
-panel `Section` and routes under `/panel/cms`.
+Requires PHP 8.3+ and `lunarphp/panel` 2.x — this is an add-on for the Lunar 2
+admin panel, not a standalone app.
+
+The package isn't on Packagist yet, so point composer at the repo first:
+
+```json
+"repositories": [
+    { "type": "vcs", "url": "https://github.com/fabianmarz/lunar-cms" }
+]
+```
+
+```bash
+composer require lunar-2-test/cms
+php artisan migrate           # creates the pages table
+php artisan lunar:panel:link  # symlinks the compiled bundle into public/vendor/lunar-panel/cms
+```
+
+`CmsServiceProvider` is auto-discovered — it registers the panel section,
+routes under `/panel/cms`, translations and migrations. Nothing else to wire:
+the CMS appears under **Content → Pages** in the panel nav, and the frontend
+bundle ships prebuilt (no npm step for consumers).
+
+## Development
+
+Inside the monorepo-style app this package is developed in, it is wired via a
+`path` composer repository (`packages/cms`, namespace `LunarCms\`):
 
 ```bash
 cd packages/cms
 npm install        # once — deps externalize against panel globals
-npm run build      # produces build/ (committed, served via /vendor/lunar-panel/cms symlink)
+npm run build      # produces build/ (committed, linked via lunar:panel:link)
 npm run dev        # vite build --watch while editing JS
 ```
 
